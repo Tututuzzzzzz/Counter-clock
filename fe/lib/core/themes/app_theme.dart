@@ -6,7 +6,7 @@ class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
       colorScheme: ColorScheme.fromSeed(
-        seedColor: ColorConstants.primaryColor,
+        seedColor: const Color.fromARGB(255, 60, 139, 185),
       ),
       useMaterial3: true,
       

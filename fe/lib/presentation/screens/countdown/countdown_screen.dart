@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/themes/text_styles.dart';
-import '../../providers/countdown_provider.dart';
+import '../../../data/services/timer_service.dart';
 import '../../widgets/countdown/timer_display.dart';
 import '../../widgets/countdown/timer_controls.dart';
 import '../../widgets/countdown/timer_input.dart';
@@ -17,6 +16,9 @@ class CountdownScreen extends StatefulWidget {
 
 class _CountdownScreenState extends State<CountdownScreen> {
   late TextEditingController _inputController;
+  late TimerService _timerService;
+  int _seconds = AppConstants.defaultCountdownSeconds;
+  bool _isRunning = false;
   
   @override
   void initState() {
@@ -24,12 +26,8 @@ class _CountdownScreenState extends State<CountdownScreen> {
     _inputController = TextEditingController(
       text: AppConstants.defaultCountdownSeconds.toString(),
     );
-  }
-  
-  @override
-  void dispose() {
-    _inputController.dispose();
-    super.dispose();
+    _timerService = TimerService();
+    _timerService.initialize();
   }
   
   void _showCompletionDialog() {
@@ -52,25 +50,60 @@ class _CountdownScreenState extends State<CountdownScreen> {
   }
   
   void _handleStart() {
-    final provider = context.read<CountdownProvider>();
-    final seconds = int.tryParse(_inputController.text) ?? 
+    if (_isRunning) return;
+    
+    final seconds = int.tryParse(_inputController.text) ??
         AppConstants.defaultCountdownSeconds;
-    provider.startCountdown(seconds);
+    
+    setState(() {
+      _seconds = seconds;
+      _isRunning = true;
+    });
+    
+    _timerService.startCountdown(
+      initialSeconds: seconds,
+      onTick: (seconds) {
+        setState(() {
+          _seconds = seconds;
+        });
+      },
+      onComplete: () {
+        setState(() {
+          _seconds = 0;
+          _isRunning = false;
+        });
+      },
+    );
   }
   
   void _handlePause() {
-    context.read<CountdownProvider>().stopCountdown();
+    _timerService.stopCountdown();
+    setState(() {
+      _isRunning = false;
+    });
   }
   
   void _handleReset() {
-    final provider = context.read<CountdownProvider>();
+    _timerService.stopCountdown();
     final seconds = int.tryParse(_inputController.text) ?? 
         AppConstants.defaultCountdownSeconds;
-    provider.resetCountdown(seconds);
+    setState(() {
+      _seconds = seconds;
+      _isRunning = false;
+    });
   }
   
   @override
   Widget build(BuildContext context) {
+    // Kiểm tra nếu đã hoàn thành
+    if (_seconds == 0 && !_isRunning) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _showCompletionDialog();
+        }
+      });
+    }
+    
     return Padding(
       padding: const EdgeInsets.all(20.0),
       child: Column(
@@ -82,68 +115,29 @@ class _CountdownScreenState extends State<CountdownScreen> {
             style: AppTextStyles.screenTitle,
           ),
           const SizedBox(height: 40),
+  
           
-          // Timer display with StreamBuilder
-          Consumer<CountdownProvider>(
-            builder: (context, provider, child) {
-              return StreamBuilder<int>(
-                stream: provider.countdownStream,
-                initialData: provider.seconds,
-                builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return Text(
-                      '${AppConstants.errorPrefix}${snapshot.error}',
-                      style: AppTextStyles.errorMessage,
-                    );
-                  }
-                  
-                  final seconds = snapshot.data ?? provider.seconds;
-                  
-                  // Check if completed
-                  if (seconds == 0 && provider.isRunning == false) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) {
-                        _showCompletionDialog();
-                      }
-                    });
-                  }
-                  
-                  return TimerDisplay(seconds: seconds);
-                },
-              );
-            },
-          ),
+          // Hiển thị bộ đếm thời gian
+          TimerDisplay(seconds: _seconds),
           
           const SizedBox(height: 40),
           
-          // Input field (only shown when not running)
-          Consumer<CountdownProvider>(
-            builder: (context, provider, child) {
-              if (!provider.isRunning) {
-                return Column(
-                  children: [
-                    TimerInput(controller: _inputController),
-                    const SizedBox(height: 20),
-                  ],
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
+          // Trường nhập liệu (chỉ hiển thị khi không chạy)
+          if (!_isRunning)
+            Column(
+              children: [
+                TimerInput(controller: _inputController),
+                const SizedBox(height: 20),
+              ],
+            ),
           
           // Control buttons
-          Consumer<CountdownProvider>(
-            builder: (context, provider, child) {
-              return TimerControls(
-                isRunning: provider.isRunning,
-                onStart: _handleStart,
-                onPause: _handlePause,
-                onReset: _handleReset,
-              );
-            },
+          TimerControls(
+            isRunning: _isRunning,
+            onStart: _handleStart,
+            onPause: _handlePause,
+            onReset: _handleReset,
           ),
-          
-          const SizedBox(height: 40),
         ],
       ),
     );

@@ -43,24 +43,9 @@ class TimerService {
     });
   }
   
-  /// Dừng bộ đếm thời gian đếm ngược
+  // Dừng bộ đếm thời gian đếm ngược
   void stopCountdown() {
     _timer?.cancel();
     _timer = null;
   }
-  
-  /// Phát giá trị đến luồng
-  void emitValue(int value) {
-    _countdownController?.add(value);
-  }
-  
-  /// Giải phóng tài nguyên
-  void dispose() {
-    stopCountdown();
-    _countdownController?.close();
-    _countdownController = null;
-  }
-  
-  /// Kiểm tra xem bộ đếm thời gian có đang hoạt động không
-  bool get isActive => _timer?.isActive ?? false;
 }

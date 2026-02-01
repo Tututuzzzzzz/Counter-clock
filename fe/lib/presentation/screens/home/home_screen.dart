@@ -31,11 +31,13 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: 
+      AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('Đồng Hồ Đếm Ngược'),
       ),
-      body: FutureBuilder<String>(
+      body: 
+      FutureBuilder<String>(
         future: _initializationFuture,
         builder: (context, snapshot) {
           // Handle different states
